@@ -65,8 +65,9 @@
       event.preventDefault();
       const topic = document.getElementById("topicInput").value;
       localStorage.setItem("mqtt_topic", topic);
-      window.location.href = "index.html";
+      window.location.href = "dashboard.html";  // ✅ redirect to your actual dashboard page
     }
   </script>
+
 </body>
 </html>
