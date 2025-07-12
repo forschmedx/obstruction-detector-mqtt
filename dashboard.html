@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Obstruction Detection Dashboard</title>
+
+  <!-- Fonts + Libraries -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="mqtt.js" defer></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: #1e1e2f;
+      color: #f2f2f2;
+      padding: 40px;
+      box-sizing: border-box;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 30px;
+    }
+
+    .timestamp {
+      text-align: left;
+      font-size: 16px;
+      color: #bbb;
+      line-height: 1.4;
+      min-width: 160px;
+    }
+
+    .title-area {
+      text-align: center;
+      flex-grow: 1;
+    }
+
+    .title-area h1 {
+      margin: 0;
+      font-size: 32px;
+      color: #ffffff;
+    }
+
+    .title-area p {
+      margin-top: 4px;
+      font-size: 16px;
+      color: #aaa;
+    }
+
+    .top-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 10px;
+    }
+
+    .card {
+      background: #2a2a3d;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+
+    .label {
+      font-size: 14px;
+      color: #aaa;
+      margin-bottom: 8px;
+    }
+
+    .value {
+      font-size: 28px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      max-width: 100%;
+      margin-top: 30px;
+    }
+
+    @media (max-width: 800px) {
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    canvas {
+      background: #2a2a3d;
+      border-radius: 12px;
+      padding: 10px;
+      width: 100% !important;
+      height: 250px !important;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <div class="timestamp">
+      <div id="date"></div>
+      <div id="clock"></div>
+    </div>
+    <div class="title-area">
+      <h1>🩺 Obstruction Detection Dashboard</h1>
+      <p>Live view of all simulated and real-time sensor values</p>
+    </div>
+  </div>
+
+  <div class="top-row">
+    <div class="card"><div class="label">Pressure (mmHg)</div><div id="pressure" class="value">--</div></div>
+    <div class="card"><div class="label">Vibration</div><div id="vibration" class="value">--</div></div>
+    <div class="card"><div class="label">Temperature (°C)</div><div id="temperature" class="value">--</div></div>
+    <div class="card"><div class="label">Obstruction (%)</div><div id="flow" class="value">--</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <canvas id="chartPressure"></canvas>
+    <canvas id="chartVibration"></canvas>
+    <canvas id="chartTemperature"></canvas>
+    <canvas id="chartObstruction"></canvas>
+  </div>
+
+</body>
+</html>
