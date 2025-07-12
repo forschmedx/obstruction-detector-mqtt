@@ -55,19 +55,20 @@
 </head>
 <body>
   <h1>Subscribe to an MQTT Topic</h1>
-  <form onsubmit="saveTopic(event)">
+  <form id="topicForm">
     <input type="text" id="topicInput" placeholder="Enter MQTT Topic" required />
     <button type="submit">Subscribe</button>
   </form>
 
   <script>
-    function saveTopic(event) {
-      event.preventDefault();
-      const topic = document.getElementById("topicInput").value;
-      localStorage.setItem("mqtt_topic", topic);
-      window.location.href = "dashboard.html";  // ✅ redirect to your actual dashboard page
-    }
+    document.getElementById("topicForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const topic = document.getElementById("topicInput").value.trim();
+      if (topic) {
+        localStorage.setItem("mqtt_topic", topic);
+        window.location.href = "dashboard.html";  // This must exactly match your second HTML page name
+      }
+    });
   </script>
-
 </body>
 </html>

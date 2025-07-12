@@ -1,5 +1,10 @@
 const broker = 'wss://test.mosquitto.org:8081';
-const topic = localStorage.getItem('mqtt_topic')
+const topic = localStorage.getItem('mqtt_topic');
+
+if (!topic) {
+  alert("❗ MQTT topic not found. Redirecting...");
+  window.location.href = "index.html";
+}
 
 const options = {
   clientId: 'dashboard_' + Math.random().toString(16).substr(2, 8),
@@ -18,7 +23,7 @@ const datasets = {
   obstruction: []
 };
 
-// Create Charts with individual colors
+// Create Charts
 const chartPressure = createChart('chartPressure', 'Pressure (mmHg)', '#00d084', 'rgba(0,208,132,0.2)');
 const chartVibration = createChart('chartVibration', 'Vibration', '#f39c12', 'rgba(243, 156, 18, 0.2)');
 const chartTemperature = createChart('chartTemperature', 'Temperature (°C)', '#3498db', 'rgba(52, 152, 219, 0.2)');
@@ -31,10 +36,10 @@ function createChart(canvasId, label, borderColor, backgroundColor) {
     data: {
       labels: [],
       datasets: [{
-        label: label,
+        label,
         data: [],
-        borderColor: borderColor,
-        backgroundColor: backgroundColor,
+        borderColor,
+        backgroundColor,
         fill: true,
         tension: 0.4,
         pointRadius: 2
@@ -66,7 +71,10 @@ function createChart(canvasId, label, borderColor, backgroundColor) {
 
 client.on('connect', () => {
   console.log('✅ Connected to MQTT');
-  client.subscribe(topic);
+  client.subscribe(topic, err => {
+    if (err) console.error("❌ Subscription error:", err);
+    else console.log("📡 Subscribed to:", topic);
+  });
 });
 
 client.on('message', (t, msg) => {
@@ -74,15 +82,26 @@ client.on('message', (t, msg) => {
     try {
       const data = JSON.parse(msg.toString());
 
-      updateUI('pressure', data.pressure);
-      updateUI('vibration', data.vibration);
-      updateUI('temperature', data.temperature);
-      updateUI('flow', data.obstruction);
+      if (data.pressure !== undefined) {
+        updateUI('pressure', data.pressure);
+        updateChart(chartPressure, datasets.pressure, data.pressure);
+      }
 
-      updateChart(chartPressure, datasets.pressure, data.pressure);
-      updateChart(chartVibration, datasets.vibration, data.vibration);
-      updateChart(chartTemperature, datasets.temperature, data.temperature);
-      updateChart(chartObstruction, datasets.obstruction, data.obstruction);
+      if (data.vibration !== undefined) {
+        updateUI('vibration', data.vibration);
+        updateChart(chartVibration, datasets.vibration, data.vibration);
+      }
+
+      if (data.temperature !== undefined) {
+        updateUI('temperature', data.temperature);
+        updateChart(chartTemperature, datasets.temperature, data.temperature);
+      }
+
+      const obstructionVal = data.obstruction ?? data.flow;
+      if (obstructionVal !== undefined) {
+        updateUI('flow', obstructionVal);
+        updateChart(chartObstruction, datasets.obstruction, obstructionVal);
+      }
 
     } catch (err) {
       console.error("❌ JSON parse error:", err);
