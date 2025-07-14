@@ -9,48 +9,82 @@ const options = {
 const client = mqtt.connect(broker, options);
 const maxPoints = 20;
 
-const datasets = {
-  pressure: [],
-  vibration: [],
-  temperature: [],
-  obstruction: []
-};
+const datasets = {};  // Dynamic datasets
+const charts = {};    // Dynamic chart instances
 
-const chartPressure = createChart('chartPressure', 'Pressure (mmHg)', '#00d084', 'rgba(0,208,132,0.2)', 'mmHg');
-const chartVibration = createChart('chartVibration', 'Vibration', '#f39c12', 'rgba(243, 156, 18, 0.2)', '');
-const chartTemperature = createChart('chartTemperature', 'Temperature (°C)', '#3498db', 'rgba(52, 152, 219, 0.2)', '°C');
-const chartObstruction = createChart('chartObstruction', 'Obstruction (%)', '#e74c3c', 'rgba(231, 76, 60, 0.2)', '%');
+const cardsContainer = document.getElementById('cardsContainer');
+const chartsContainer = document.getElementById('chartsContainer');
 
-function createChart(canvasId, label, borderColor, backgroundColor, unit) {
+// MQTT connect
+client.on('connect', () => {
+  console.log('✅ Connected to MQTT');
+  client.subscribe(topic);
+});
+
+// MQTT message
+client.on('message', (t, msg) => {
+  if (t === topic) {
+    try {
+      const data = JSON.parse(msg.toString());
+
+      Object.keys(data).forEach(param => {
+        if (!datasets[param]) {
+          // First-time: create card and chart
+          datasets[param] = [];
+          createCard(param);
+          charts[param] = createChartDynamic(param);
+        }
+
+        updateUI(param, data[param]);
+        updateChart(param, data[param]);
+      });
+
+    } catch (err) {
+      console.error("❌ JSON parse error:", err);
+    }
+  }
+});
+
+// Create Card
+function createCard(param) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <div class="label">${param}</div>
+    <div id="${param}_value" class="value">--</div>
+  `;
+  cardsContainer.appendChild(card);
+}
+
+// Create Chart
+function createChartDynamic(param) {
+  const container = document.createElement('div');
+  const canvasId = `chart_${param}`;
+  container.innerHTML = `<canvas id="${canvasId}"></canvas>`;
+  chartsContainer.appendChild(container);
+
   const ctx = document.getElementById(canvasId).getContext('2d');
   return new Chart(ctx, {
     type: 'line',
     data: {
       labels: [],
       datasets: [{
-        label: label,
+        label: param,
         data: [],
-        borderColor: borderColor,
-        backgroundColor: backgroundColor,
+        borderColor: getRandomColor(),
+        backgroundColor: 'rgba(255,255,255,0.05)',
         fill: true,
         tension: 0.4,
         pointRadius: 2
       }]
     },
     options: {
-      layout: { padding: { top: 30, bottom: 10 } },
       plugins: {
-        legend: {
-          labels: {
-            color: '#fff',
-            font: { size: 16 },
-            padding: 20
-          }
-        },
+        legend: { labels: { color: '#fff' } },
         tooltip: {
           callbacks: {
             label: function (context) {
-              return `${label}: ${context.parsed.y} ${unit}`;
+              return `${param}: ${context.parsed.y}`;
             }
           }
         }
@@ -58,54 +92,34 @@ function createChart(canvasId, label, borderColor, backgroundColor, unit) {
       interaction: { mode: 'index', intersect: false },
       scales: {
         x: { display: false },
-        y: {
-          beginAtZero: true,
-          ticks: { color: '#fff' }
-        }
+        y: { beginAtZero: true, ticks: { color: '#fff' } }
       }
     }
   });
 }
 
-client.on('connect', () => {
-  console.log('✅ Connected to MQTT');
-  client.subscribe(topic);
-});
-
-client.on('message', (t, msg) => {
-  if (t === topic) {
-    try {
-      const data = JSON.parse(msg.toString());
-
-      updateUI('pressure', data.pressure);
-      updateUI('vibration', data.vibration);
-      updateUI('temperature', data.temperature);
-      updateUI('flow', data.obstruction);
-
-      updateChart(chartPressure, datasets.pressure, data.pressure);
-      updateChart(chartVibration, datasets.vibration, data.vibration);
-      updateChart(chartTemperature, datasets.temperature, data.temperature);
-      updateChart(chartObstruction, datasets.obstruction, data.obstruction);
-    } catch (err) {
-      console.error("❌ JSON parse error:", err);
-    }
-  }
-});
-
-function updateUI(id, value) {
-  document.getElementById(id).innerText = value;
+// Update UI Card
+function updateUI(param, value) {
+  document.getElementById(`${param}_value`).innerText = value;
 }
 
-function updateChart(chart, dataset, value) {
+// Update Chart
+function updateChart(param, value) {
   const timestamp = new Date().toLocaleTimeString();
-  dataset.push({ time: timestamp, value });
-  if (dataset.length > maxPoints) dataset.shift();
+  datasets[param].push({ time: timestamp, value });
+  if (datasets[param].length > maxPoints) datasets[param].shift();
 
+  const chart = charts[param];
   chart.data.labels.push(timestamp);
   if (chart.data.labels.length > maxPoints) chart.data.labels.shift();
 
-  chart.data.datasets[0].data = dataset.map(d => d.value);
+  chart.data.datasets[0].data = datasets[param].map(d => d.value);
   chart.update();
+}
+
+// Random Color for Charts
+function getRandomColor() {
+  return `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
 }
 
 // Clock
@@ -191,16 +205,24 @@ window.addEventListener('DOMContentLoaded', () => {
 // ================= Download CSV =================
 window.downloadCSV = () => {
   const count = parseInt(document.getElementById('csvCount').value) || 5;
-  const rows = [['Time', 'Pressure', 'Vibration', 'Temperature', 'Obstruction']];
+  const paramList = Object.keys(datasets);
 
-  for (let i = -count; i < 0; i++) {
-    const p = datasets.pressure.at(i);
-    const v = datasets.vibration.at(i);
-    const t = datasets.temperature.at(i);
-    const o = datasets.obstruction.at(i);
-    if (p && v && t && o) {
-      rows.push([p.time, p.value, v.value, t.value, o.value]);
-    }
+  const headerRow = ['Time', ...paramList];
+  const rows = [headerRow];
+
+  const maxLength = Math.max(...paramList.map(p => datasets[p].length));
+
+  for (let i = Math.max(0, maxLength - count); i < maxLength; i++) {
+    const row = [];
+    const sampleTime = datasets[paramList[0]][i]?.time || '';
+    row.push(sampleTime);
+
+    paramList.forEach(param => {
+      const value = datasets[param][i]?.value ?? '';
+      row.push(value);
+    });
+
+    rows.push(row);
   }
 
   const csv = rows.map(r => r.join(",")).join("\n");
@@ -214,5 +236,6 @@ window.downloadCSV = () => {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+
   document.getElementById('csvModal').style.display = 'none';
 };
