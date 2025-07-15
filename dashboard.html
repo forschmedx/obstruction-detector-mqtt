@@ -80,6 +80,16 @@
       color: #fff;
     }
 
+    .primary-chart {
+      width: 100%;
+      margin-bottom: 30px;
+    }
+
+    .primary-chart canvas {
+      width: 100% !important;
+      height: 300px !important;
+    }
+
     .chart-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -99,7 +109,6 @@
       border-radius: 12px;
       padding: 10px;
       width: 100% !important;
-      height: 250px !important;
       box-sizing: border-box;
     }
   </style>
@@ -119,6 +128,11 @@
 
   <!-- ✅ Dynamic Content Containers -->
   <div id="cardsContainer" class="top-row"></div>
+
+  <!-- Full-width graph -->
+  <div id="primaryChartContainer" class="primary-chart"></div>
+
+  <!-- Grid for remaining graphs -->
   <div id="chartsContainer" class="chart-grid"></div>
 
 </body>
